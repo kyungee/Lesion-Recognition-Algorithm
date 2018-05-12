@@ -25,6 +25,8 @@ for path_dir in all_data_dir:
 
     if '.DS_Store' in file_list:
         file_list.remove('.DS_Store')
+    if 'Thumbs.db' in file_list:
+        file_list.remove('Thumbs.db')
 
     for filename in file_list:
         input_filename = path_dir+filename
