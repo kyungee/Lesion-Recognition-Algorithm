@@ -1,5 +1,12 @@
+import os
+import csv
+import math
+import numpy as np
 import cv2
-
+from cv2 import matchTemplate as cvm
+import pprint
+from scipy import stats as sp
+from matplotlib import pyplot as plt
 
 def tracking():
     img1 = cv2.imread('./data/test/ruptured/mark/m03913745_1.jpg')
@@ -72,3 +79,44 @@ def hough_circle():
 #             cv2.circle(img_curr, (centerX, centerY), r, (0, 0, 255), 2)
 #
 #             cv2.imwrite(input_filename, img_gray)
+
+
+def gaussian_test(m_x=60, m_y=50, cov_size=128):
+    mu = [m_x, m_y]
+    cov = [[cov_size, 0], [0, cov_size]]
+    rv = sp.multivariate_normal(mu, cov)
+    xx = np.linspace(0, 127, 128)
+    yy = np.linspace(0, 127, 128)
+    XX, YY = np.meshgrid(xx, yy)
+    plt.grid(False)
+    rv_array = rv.pdf(np.dstack([XX, YY]))
+    h, w = rv_array.shape
+    rv_array = rv_array * 10e25
+
+    rv_ceil_array = np.zeros((h, w))
+    for y in range(0, h):
+        for x in range(0, w):
+            normalized = math.ceil(rv_array[y][x])
+            rv_ceil_array[y][x] = math.ceil(normalized)
+
+    minimum = rv_ceil_array.min()
+    maximum = rv_ceil_array.max()
+    for y in range(0, h):
+        for x in range(0, w):
+            normalized = (rv_ceil_array[y][x] - minimum) / (maximum - minimum) * 255
+            if math.ceil(normalized) == 1.0:
+                rv_ceil_array[y][x] = 0.0
+            else:
+                rv_ceil_array[y][x] = math.ceil(normalized)
+
+    for y in range(0, h):
+        for x in range(0, w):
+            print(rv_ceil_array[y][x])
+
+
+    plt.contourf(XX, YY, rv_ceil_array)
+    plt.axis("equal")
+    plt.show()
+
+
+gaussian_test()

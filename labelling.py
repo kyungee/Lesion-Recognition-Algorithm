@@ -1,5 +1,6 @@
 import os
 import csv
+import math
 import numpy as np
 import cv2
 from cv2 import matchTemplate as cvm
@@ -147,38 +148,60 @@ def find_circle(img_gray):
     return (x, y, size)
 
 
-def make_gaussian_array(img, x, y):
-
-    h = img.shape[0]
-    w = img.shape[1]
-
-    mu = [x, y]
-    cov = [[1024, 0], [0, 1024]]
+def make_gaussian_array(m_x=60, m_y=50, cov_size=128):
+    mu = [m_x, m_y]
+    cov = [[cov_size, 0], [0, cov_size]]
     rv = sp.multivariate_normal(mu, cov)
-    xx = np.linspace(0, w, 255)
-    yy = np.linspace(0, h, 255)
+    xx = np.linspace(0, 127, 128)
+    yy = np.linspace(0, 127, 128)
     XX, YY = np.meshgrid(xx, yy)
-    print(np.dstack([XX, YY]))
-    plt.grid(False)
-    plt.contourf(XX, YY, rv.pdf(np.dstack([XX, YY])))
-    plt.axis("equal")
-    plt.show()
+    rv_array = rv.pdf(np.dstack([XX, YY]))
+    h, w = rv_array.shape
+    rv_array = rv_array * 10e25
+
+    rv_ceil_array = np.zeros((h, w))
+    for y in range(0, h):
+        for x in range(0, w):
+            normalized = math.ceil(rv_array[y][x])
+            rv_ceil_array[y][x] = math.ceil(normalized)
+
+    minimum = rv_ceil_array.min()
+    maximum = rv_ceil_array.max()
+    for y in range(0, h):
+        for x in range(0, w):
+            normalized = (rv_ceil_array[y][x] - minimum) / (maximum - minimum) * 255
+            if math.ceil(normalized) == 1.0:
+                rv_ceil_array[y][x] = 0.0
+            else:
+                rv_ceil_array[y][x] = math.ceil(normalized)
+
+    return rv_ceil_array
 
 
-def gaussian_test():
-    mu = [2, 3]
-    cov = [[1, 0], [0, 1]]
-    rv = sp.multivariate_normal(mu, cov)
-    xx = np.linspace(0, 4, 120)
-    yy = np.linspace(1, 5, 150)
+def gaussian_test(file_dir, m_x=2, m_y=3, cov_size=1):
+    xx = np.linspace(0, 127, 128)
+    yy = np.linspace(0, 127, 128)
     XX, YY = np.meshgrid(xx, yy)
-    print(np.dstack([XX, YY]))
     plt.grid(False)
-    plt.contourf(XX, YY, rv.pdf(np.dstack([XX, YY])))
+    rv_result_array = make_gaussian_array(m_x, m_y, cov_size)
+
+    plt.contourf(XX, YY, rv_result_array)
     plt.axis("equal")
-    plt.show()
+
+    fig = plt.gcf()
+    fig.savefig(file_dir+'.pdf')
 
 
+def make_nparray_to_csv(file_dir, np_array):
+    f = open(file_dir+'.csv', 'w', encoding='utf-8', newline='')
+    wr = csv.writer(f)
+    h, w = np_array.shape
+    for y in range(0, h):
+        wr.writerow(np_array[y])
+    f.close()
+
+
+# Main 함수
 item_list = []
 totalListTuple = make_file_list(test_dir)
 for file_dir in totalListTuple[1]:
@@ -188,10 +211,12 @@ for file_dir in totalListTuple[1]:
     print('x= %d, y= %d, size= %d' % (x, y, size))
     print(file_number + file_tag)
     item_list.append((file_dir, x, y, size))
+    gaussian_test(result_data_file_dir + file_number + file_tag, x, y, size)
+    make_nparray_to_csv(result_data_file_dir + file_number + file_tag, make_gaussian_array(x, y, size))
 
 # 데이터를 csv로 추출
-f = open('test.csv', 'w', encoding='utf-8', newline='')
-wr = csv.writer(f)
-for item in item_list:
-    wr.writerow(item)
-f.close()
+# f = open('test.csv', 'w', encoding='utf-8', newline='')
+# wr = csv.writer(f)
+# for item in item_list:
+#     wr.writerow(item)
+# f.close()

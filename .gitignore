@@ -8,3 +8,7 @@
 
 .DS_Store
 .idea/
+
+# 테스트 데이터
+/temp
+test.csv
