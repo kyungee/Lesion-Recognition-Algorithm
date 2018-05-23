@@ -1,34 +1,101 @@
 import os
+import csv
 import numpy as np
 import cv2
+from cv2 import matchTemplate as cvm
+import pprint
 from scipy import stats as sp
-
 from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # 3d plotting을 위해서
 
 
-all_data_dir = ['./result/test/ruptured/mark/',
-                './result/test/unruptured/mark/',
-                './result/train/ruptured/mark/',
-                './result/train/unruptured/mark/']
+
+test_dir = ['./temp/testcase/n/', './temp/testcase/r/']
+original_r_data_dir = './temp/testcase/ruptured/'
+original_u_data_dir = './temp/testcase/unruptured/'
+result_data_file_dir = './temp/testcase/result/'
+all_data_dir = ['./temp/testcase/ruptured/', './temp/testcase/unruptured/']
 
 
-def tracking():
-    img1 = cv2.imread('./data/test/ruptured/mark/m03913745_1.jpg')
-    hsv = cv2.cvtColor(img1, cv2.COLOR_BGR2HSV)
+def make_file_list(folder_dir):
+    final_nfile_list = []
+    final_rfile_list = []
+    final_ufile_list = []
+    for path_dir in folder_dir:
+        file_list = os.listdir(path_dir)
 
-    lower_white = np.array([0, 0, 99])
-    upper_white = np.array([0, 0, 100])
+        if '.DS_Store' in file_list:
+            file_list.remove('.DS_Store')
 
-    mask_white = cv2.inRange(hsv, lower_white, upper_white)
+        for filename in file_list:
+            input_filename = path_dir+filename
 
-    res = cv2.bitwise_and(img1, img1, mask=mask_white)
+            if filename != 'Thumbs.db':
+                if path_dir[-2] == 'n':
+                    final_nfile_list.append(input_filename)
+                if path_dir[-2] == 'r':
+                    final_rfile_list.append(input_filename)
+                if path_dir[-2] == 'u':
+                    final_ufile_list.append(input_filename)
 
-    cv2.imshow('original', img1)
-    cv2.imshow('WHITE', res)
+    return (final_nfile_list, final_rfile_list, final_ufile_list)
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindow()
+
+def get_marked_image(file_dir):
+    file_number, file_tag = split_file_name(file_dir)
+    original_image = cv2.imread(file_dir)
+    original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+    w, h = original_image.shape[::-1]
+    top_left = find_image_pixel(original_image, file_number, file_tag)
+    flag_str = ''
+    if file_tag == 'r':
+        flag_str = 'ruptured'
+    if file_tag == 'u':
+        flag_str = 'unruptured'
+    img_marked_path = './temp/testcase/' + flag_str + ' - marking/' + file_number + '.jpg'
+    img_marked = cv2.imread(img_marked_path)
+    img_marked = cv2.cvtColor(img_marked, cv2.COLOR_BGR2GRAY)
+    img_trimmed = img_marked[top_left[1]:top_left[1] + h, top_left[0]:top_left[0] + w]
+    cv2.imwrite(result_data_file_dir+file_number+file_tag+'.jpg', img_trimmed)
+    return img_trimmed
+
+
+def cv2_based(field_array,match_array):
+    M = cvm(field_array.astype('uint8'),match_array.astype('uint8'),cv2.TM_SQDIFF)
+    return np.where(M==0)
+
+
+def split_file_name(file_dir):
+    dir_string = file_dir.split('-')
+    file_number = dir_string[0][-4:]
+    file_tag = dir_string[1][0]
+    return (file_number, file_tag)
+
+
+def find_image_pixel(image, file_number, file_tag):
+    flag_str = ''
+    if file_tag == 'r':
+        flag_str = 'ruptured'
+    if file_tag == 'u':
+        flag_str = 'unruptured'
+    cmp_img_path = './temp/testcase/' + flag_str + '/' + file_number + '.jpg'
+    cmp_img = cv2.imread(cmp_img_path)
+    cmp_gray_image = cv2.cvtColor(cmp_img, cv2.COLOR_BGR2GRAY)
+
+    # template 이미지의 가로/세로
+    w, h = image.shape[::-1]
+
+    res = cv2.matchTemplate(cmp_gray_image, image, cv2.TM_SQDIFF)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+    top_left = min_loc
+    return top_left
+
+    # bottom_right = (top_left[0] + w, top_left[1] + h)
+
+    # cv2.rectangle(cmp_gray_image, top_left, bottom_right, 255, 5)
+    # plt.subplot(121), plt.title('TM_CCOEFF'), plt.imshow(res, cmap='gray'), plt.yticks([]), plt.xticks([])
+    # plt.subplot(122), plt.imshow(cmp_gray_image, cmap='gray')
+    # plt.show()
 
 
 def check_pixel(arr, x, y):
@@ -43,11 +110,7 @@ def check_pixel(arr, x, y):
         return False
 
 
-def find_circle(file_name):
-    img_color = cv2.imread(file_name, cv2.IMREAD_COLOR)
-
-    img_gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
-
+def find_circle(img_gray):
     h = img_gray.shape[0]
     w = img_gray.shape[1]
 
@@ -56,8 +119,9 @@ def find_circle(file_name):
     whiteYPixelList = []
 
     white_flag = 0
-    threshold = 50
-    sensitivity = 2
+    threshold = 1
+    size = 0
+    sensitivity = 1
     # loop over the image, pixel by pixel
     for y in range(threshold, h-threshold):
         for x in range(threshold, w-threshold):
@@ -68,31 +132,19 @@ def find_circle(file_name):
                     whitePixelList.append((x, y))
                     whiteXPixelList.append(x)
                     whiteYPixelList.append(y)
+                    size += 1
             else:
                 white_flag = 0
 
-    print(whitePixelList)
-
-    centerX = 0
-    centerY = 0
-
+    x = 0
+    y = 0
     if len(whitePixelList) == 0:
-        print("없음")
+        x, y, size = None
     else:
-        centerX = int((max(whiteXPixelList) + min(whiteXPixelList))/2)
-        centerY = int((max(whiteYPixelList) + min(whiteYPixelList))/2)
-        print("%d, %d" % (centerX, centerY))
-        make_gaussian_array(img_gray, centerX, centerY)
+        x = int((max(whiteXPixelList) + min(whiteXPixelList))/2)
+        y = int((max(whiteYPixelList) + min(whiteYPixelList))/2)
 
-
-
-    r = 40
-
-    cv2.circle(img_gray, (centerX, centerY), r, (0, 0, 255), 2)
-
-    cv2.imwrite(file_name, img_gray)
-
-    return (centerX, centerY)
+    return (x, y, size)
 
 
 def make_gaussian_array(img, x, y):
@@ -127,72 +179,19 @@ def gaussian_test():
     plt.show()
 
 
-def hough_circle():
-    print('시작')
-    img1 = cv2.imread('C:\Sources\PycharmProjects\Capstone1\data\m00021718_r1.jpg')
-    img2 = img1.copy()
+item_list = []
+totalListTuple = make_file_list(test_dir)
+for file_dir in totalListTuple[1]:
+    file_number, file_tag = split_file_name(file_dir)
+    img_trim = get_marked_image(file_dir)
+    x, y, size = find_circle(img_trim)
+    print('x= %d, y= %d, size= %d' % (x, y, size))
+    print(file_number + file_tag)
+    item_list.append((file_dir, x, y, size))
 
-    img2 = cv2.GaussianBlur(img2, (3, 3), 0)
-    imgray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-
-    circles = cv2.HoughCircles(imgray, cv2.HOUGH_GRADIENT, 1, 10,
-                               param1=70, param2=50, minRadius=0, maxRadius=0)
-    if circles is not None:
-        circles = np.uint16(np.around(circles))
-
-        for i in circles[0, :]:
-            cv2.circle(img1, (i[0], i[1]), i[2], (255, 255, 0) ,1)
-
-        cv2.imshow('HoughCircles', img1)
-        cv2.waitKey(0)
-        cv2.destroyAllWindow()
-
-    else:
-        print('원을 찾지 못했습니다.')
-
-
-#make labeled image
-# def onMouse(event,x,y,flags,param):
-#     global centerX, centerY;
-#     if cv2.EVENT_LBUTTONDOWN == event:
-#         centerX = x
-#         centerY = y
-#
-# cv2.namedWindow('win1', cv2.IMREAD_GRAYSCALE)
-# cv2.setMouseCallback('win1',onMouse)
-# for path_dir in all_data_dir:
-#     file_list = os.listdir(path_dir)
-#
-#     if '.DS_Store' in file_list:
-#         file_list.remove('.DS_Store')
-#
-#     for filename in file_list:
-#         input_filename = path_dir+'test/'+filename
-#         print(input_filename)
-#
-#         if (filename != 'Thumbs.db'):
-#             img_curr = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
-#
-#             cv2.imshow('win1', img_curr)
-#
-#
-#
-#             cv2.circle(img_curr, (centerX, centerY), r, (0, 0, 255), 2)
-#
-#             cv2.imwrite(input_filename, img_gray)
-
-#gaussian_test()
-find_circle('./result/test/unruptured/mark/m00091273_rotate_0.jpg')
-
-# for path_dir in all_data_dir:
-#     file_list = os.listdir(path_dir)
-#
-#     if '.DS_Store' in file_list:
-#         file_list.remove('.DS_Store')
-#
-#     for filename in file_list:
-#         input_filename = path_dir+filename
-#         print(input_filename)
-#
-#         if (filename != 'Thumbs.db'):
-#            find_circle(input_filename)
+# 데이터를 csv로 추출
+f = open('test.csv', 'w', encoding='utf-8', newline='')
+wr = csv.writer(f)
+for item in item_list:
+    wr.writerow(item)
+f.close()
