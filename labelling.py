@@ -85,18 +85,30 @@ def find_image_pixel(image, file_number, file_tag):
     # template 이미지의 가로/세로
     w, h = image.shape[::-1]
 
-    res = cv2.matchTemplate(cmp_gray_image, image, cv2.TM_SQDIFF)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+    # Template Match Method
+    methods = ['cv2.TM_SQDIFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR', 'cv2.TM_CCORR_NORMED', 'cv2.TM_CCOEFF', 'cv2.TM_SQDIFF_NORMED']
 
-    top_left = min_loc
-    return top_left
+    for meth in methods:
+        method = eval(meth)
 
-    # bottom_right = (top_left[0] + w, top_left[1] + h)
+        res = cv2.matchTemplate(cmp_gray_image, image, method)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
-    # cv2.rectangle(cmp_gray_image, top_left, bottom_right, 255, 5)
-    # plt.subplot(121), plt.title('TM_CCOEFF'), plt.imshow(res, cmap='gray'), plt.yticks([]), plt.xticks([])
-    # plt.subplot(122), plt.imshow(cmp_gray_image, cmap='gray')
-    # plt.show()
+        if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
+            top_left = min_loc
+        else:
+            top_left = max_loc
+
+        img_marked_path = './temp/testcase/' + flag_str + ' - marking/' + file_number + '.jpg'
+        img_marked = cv2.imread(img_marked_path)
+        img_marked = cv2.cvtColor(img_marked, cv2.COLOR_BGR2GRAY)
+        img_trimmed = img_marked[top_left[1]:top_left[1] + h, top_left[0]:top_left[0] + w]
+
+        x, y, size = find_circle(img_trimmed)
+        if size is not None:
+            return top_left
+
+    return None
 
 
 def check_pixel(arr, x, y):
@@ -140,7 +152,9 @@ def find_circle(img_gray):
     x = 0
     y = 0
     if len(whitePixelList) == 0:
-        x, y, size = None
+        x = None
+        y = None
+        size = None
     else:
         x = int((max(whiteXPixelList) + min(whiteXPixelList))/2)
         y = int((max(whiteYPixelList) + min(whiteYPixelList))/2)
@@ -201,6 +215,10 @@ def make_nparray_to_csv(file_dir, np_array):
     f.close()
 
 
+def make_nparray_to_jpg(file_dir, np_array):
+    cv2.imwrite(file_dir+'_n.jpg', np_array)
+
+
 # Main 함수
 item_list = []
 totalListTuple = make_file_list(test_dir)
@@ -208,11 +226,13 @@ for file_dir in totalListTuple[1]:
     file_number, file_tag = split_file_name(file_dir)
     img_trim = get_marked_image(file_dir)
     x, y, size = find_circle(img_trim)
-    print('x= %d, y= %d, size= %d' % (x, y, size))
-    print(file_number + file_tag)
-    item_list.append((file_dir, x, y, size))
-    gaussian_test(result_data_file_dir + file_number + file_tag, x, y, size)
-    make_nparray_to_csv(result_data_file_dir + file_number + file_tag, make_gaussian_array(x, y, size))
+    if size is not None:
+        print('x= %d, y= %d, size= %d' % (x, y, size))
+        print(file_number + file_tag)
+        item_list.append((file_dir, x, y, size))
+        gaussian_test(result_data_file_dir + file_number + file_tag, x, y, size)
+        make_nparray_to_csv(result_data_file_dir + file_number + file_tag, make_gaussian_array(x, y, size))
+        make_nparray_to_jpg(result_data_file_dir + file_number + file_tag, make_gaussian_array(x, y, size))
 
 # 데이터를 csv로 추출
 # f = open('test.csv', 'w', encoding='utf-8', newline='')
