@@ -1,6 +1,7 @@
-
 import os, sys
 import cv2
+import numpy as np
+import scipy.ndimage as ndi
 
 
 all_data_dir = ['./original/test/Ruptured/', './original/train/Ruptured/',
@@ -34,24 +35,29 @@ for path_dir in all_data_dir:
         img = cv2.imread(input_filename, 1)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        height, width = img.shape[:2]
+        c_in = 0.5 * np.array(img.shape)
+        c_out = 0.5  * np.array(img.shape)
 
-        if width != height:
-            img = crop_img(img, width, height)
+        intensity = 20.0
 
-        height, width = img.shape[:2]
-
-        for i in range(1, 4):
-            angle = i*90
-            M = cv2.getRotationMatrix2D((width / 2, height / 2), -angle, 1)
-            dst = cv2.warpAffine(img, M, (width, height))
-
+        for i in range(0, 9):
+            theta = np.pi/180 * np.random.uniform(-intensity, intensity)
+            inv_rotation = np.array([[np.cos(theta), np.sin(theta)], [0, 1]] / np.cos(theta))
+            offset = c_in - np.dot(inv_rotation, c_out)
+            out = (ndi.affine_transform(
+                img,
+                inv_rotation,
+                order=2,
+                offset=offset,
+                output=np.int32,
+                mode="nearest"
+            ))
             f_filename = filename.split('.jpg')[0]
-            output_filename = f_filename+'_rotate_'+str(angle)+'.jpg'
+            output_filename = f_filename+'_shear_'+str(i)+'.jpg'
 
             path = r'./%s%s' % (path_dir[2:], output_filename)
             print(path)
-            cv2.imwrite(path, dst)
+            cv2.imwrite(path, out)
 
 
 print("\n * Completed!!!!")
