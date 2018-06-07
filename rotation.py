@@ -3,18 +3,18 @@ import os, sys
 import cv2
 
 
-all_data_dir = ['./original/test/Ruptured/', './original/train/Ruptured/',
-                './original/test/Unruptured/', './original/train/Unruptured/',
-                './original/test/Normal/', './original/train/Normal/',]
+all_data_dir = ['./original/test/ruptured/', './original/train/ruptured/',
+                './original/test/unruptured/', './original/train/unruptured/',
+                './original/test/normal/', './original/train/normal/']
 
 
-def crop_img(input, w, h):
+def crop_img(_input, w, h):
     start = abs(int((w-h)/2))
 
     if w > h:
-        cropped = input[0:h, start:start+h]
+        cropped = _input[0:h, start:start+h]
     else:
-        cropped = input[start:start+w, 0:w]
+        cropped = _input[start:start+w, 0:w]
 
     return cropped
 
@@ -49,7 +49,7 @@ for path_dir in all_data_dir:
             f_filename = filename.split('.jpg')[0]
             output_filename = f_filename+'_rotate_'+str(angle)+'.jpg'
 
-            path = r'./%s%s' % (path_dir[2:], output_filename)
+            path = r'./result/rotation/%s%s' % (path_dir[11:], output_filename)
             print(path)
             cv2.imwrite(path, dst)
 

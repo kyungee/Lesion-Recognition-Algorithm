@@ -4,18 +4,18 @@ import numpy as np
 import scipy.ndimage as ndi
 
 
-all_data_dir = ['./original/test/Ruptured/', './original/train/Ruptured/',
-                './original/test/Unruptured/', './original/train/Unruptured/',
-                './original/test/Normal/', './original/train/Normal/',]
+all_data_dir = ['./original/test/ruptured/', './original/train/ruptured/',
+                './original/test/unruptured/', './original/train/unruptured/',
+                './original/test/normal/', './original/train/normal/']
 
 
-def crop_img(input, w, h):
+def crop_img(_input, w, h):
     start = abs(int((w-h)/2))
 
     if w > h:
-        cropped = input[0:h, start:start+h]
+        cropped = _input[0:h, start:start+h]
     else:
-        cropped = input[start:start+w, 0:w]
+        cropped = _input[start:start+w, 0:w]
 
     return cropped
 
@@ -36,11 +36,11 @@ for path_dir in all_data_dir:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         c_in = 0.5 * np.array(img.shape)
-        c_out = 0.5  * np.array(img.shape)
+        c_out = 0.5 * np.array(img.shape)
 
         intensity = 20.0
 
-        for i in range(0, 9):
+        for i in range(1, 9):
             theta = np.pi/180 * np.random.uniform(-intensity, intensity)
             inv_rotation = np.array([[np.cos(theta), np.sin(theta)], [0, 1]] / np.cos(theta))
             offset = c_in - np.dot(inv_rotation, c_out)
@@ -55,15 +55,9 @@ for path_dir in all_data_dir:
             f_filename = filename.split('.jpg')[0]
             output_filename = f_filename+'_shear_'+str(i)+'.jpg'
 
-            path = r'./%s%s' % (path_dir[2:], output_filename)
+            path = r'./result/shear/%s%s' % (path_dir[11:], output_filename)
             print(path)
             cv2.imwrite(path, out)
 
 
 print("\n * Completed!!!!")
-
-#cv2.imshow('Original', img)
-#cv2.imshow('warpAffine', dst)
-
-#cv2.waitKey(0)
-#cv2.destroyAllWindows()
