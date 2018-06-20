@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 
 
 
-test_dir = ['./temp/testcase/n/', './temp/testcase/r/']
+test_dir = ['./temp/testcase/u/', './temp/testcase/r/']
 original_r_data_dir = './temp/testcase/ruptured/'
 original_u_data_dir = './temp/testcase/unruptured/'
 result_data_file_dir = './temp/testcase/result/'
@@ -82,10 +82,8 @@ def find_image_pixel(image, file_number, file_tag):
     cmp_img = cv2.imread(cmp_img_path)
     cmp_gray_image = cv2.cvtColor(cmp_img, cv2.COLOR_BGR2GRAY)
 
-    # template 이미지의 가로/세로
     w, h = image.shape[::-1]
 
-    # Template Match Method
     methods = ['cv2.TM_SQDIFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR', 'cv2.TM_CCORR_NORMED', 'cv2.TM_CCOEFF', 'cv2.TM_SQDIFF_NORMED']
 
     for meth in methods:
@@ -232,6 +230,18 @@ for file_dir in totalListTuple[1]:
         item_list.append((file_dir, x, y, size))
         gaussian_test(result_data_file_dir + file_number + file_tag, x, y, size)
         make_nparray_to_csv(result_data_file_dir + file_number + file_tag, make_gaussian_array(x, y, size))
+        make_nparray_to_jpg(result_data_file_dir + file_number + file_tag, make_gaussian_array(x, y, size))
+
+for file_dir in totalListTuple[2]:
+    file_number, file_tag = split_file_name(file_dir)
+    img_trim = get_marked_image(file_dir)
+    x, y, size = find_circle(img_trim)
+    if size is not None:
+        print('x= %d, y= %d, size= %d' % (x, y, size))
+        print(file_number + file_tag)
+        item_list.append((file_dir, x, y, size))
+        #gaussian_test(result_data_file_dir + file_number + file_tag, x, y, size)
+        #make_nparray_to_csv(result_data_file_dir + file_number + file_tag, make_gaussian_array(x, y, size))
         make_nparray_to_jpg(result_data_file_dir + file_number + file_tag, make_gaussian_array(x, y, size))
 
 # 데이터를 csv로 추출

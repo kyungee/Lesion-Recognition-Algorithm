@@ -3,9 +3,11 @@ import os, sys
 import cv2
 
 
-all_data_dir = ['./original/test/ruptured/', './original/train/ruptured/',
-                './original/test/unruptured/', './original/train/unruptured/',
-                './original/test/normal/', './original/train/normal/']
+all_data_dir = ['./original/test/Ruptured/', './original/train/Ruptured/',
+                './original/test/Ruptured-Mark/', './original/train/Ruptured-Mark/',
+                './original/test/Unruptured/', './original/train/Unruptured/',
+                './original/test/Unruptured-Mark/', './original/train/Unruptured-Mark/',
+                './original/test/Normal/', './original/train/Normal/',]
 
 
 def crop_img(_input, w, h):
@@ -41,7 +43,21 @@ for path_dir in all_data_dir:
 
         height, width = img.shape[:2]
 
-        for i in range(1, 4):
+        # and both axes with flip()
+        horizontal_img = cv2.flip(img, 0)
+        vertical_img = cv2.flip(img, 1)
+
+        f_filename = filename.split('.jpg')[0]
+        output_filename1 = f_filename + '_flip_hori' + '.jpg'
+        output_filename2 = f_filename + '_flip_vert' + '.jpg'
+
+        path1 = r'./augumentation/%s%s' % (path_dir[11:], output_filename1)
+        path2 = r'./augumentation/%s%s' % (path_dir[11:], output_filename2)
+
+        cv2.imwrite(path1, horizontal_img)
+        cv2.imwrite(path2, vertical_img)
+
+        for i in range(0, 4):
             angle = i*90
             M = cv2.getRotationMatrix2D((width / 2, height / 2), -angle, 1)
             dst = cv2.warpAffine(img, M, (width, height))
@@ -49,7 +65,7 @@ for path_dir in all_data_dir:
             f_filename = filename.split('.jpg')[0]
             output_filename = f_filename+'_rotate_'+str(angle)+'.jpg'
 
-            path = r'./result/rotation/%s%s' % (path_dir[11:], output_filename)
+            path = r'./augumentation/%s%s' % (path_dir[11:], output_filename)
             print(path)
             cv2.imwrite(path, dst)
 

@@ -4,9 +4,11 @@ import numpy as np
 import scipy.ndimage as ndi
 
 
-all_data_dir = ['./original/test/ruptured/', './original/train/ruptured/',
-                './original/test/unruptured/', './original/train/unruptured/',
-                './original/test/normal/', './original/train/normal/']
+all_data_dir = ['./original/test/Ruptured/', './original/train/Ruptured/',
+                './original/test/Ruptured-Mark/', './original/train/Ruptured-Mark/',
+                './original/test/Unruptured/', './original/train/Unruptured/',
+                './original/test/Unruptured-Mark/', './original/train/Unruptured-Mark/',
+                './original/test/Normal/', './original/train/Normal/',]
 
 
 def crop_img(_input, w, h):
@@ -30,7 +32,6 @@ for path_dir in all_data_dir:
 
     for filename in file_list:
         input_filename = path_dir+filename
-        print(input_filename)
 
         img = cv2.imread(input_filename, 1)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -40,7 +41,7 @@ for path_dir in all_data_dir:
 
         intensity = 20.0
 
-        for i in range(1, 9):
+        for i in range(1, 6):
             theta = np.pi/180 * np.random.uniform(-intensity, intensity)
             inv_rotation = np.array([[np.cos(theta), np.sin(theta)], [0, 1]] / np.cos(theta))
             offset = c_in - np.dot(inv_rotation, c_out)
@@ -61,3 +62,9 @@ for path_dir in all_data_dir:
 
 
 print("\n * Completed!!!!")
+
+#cv2.imshow('Original', img)
+#cv2.imshow('warpAffine', dst)
+
+#cv2.waitKey(0)
+#cv2.destroyAllWindows()
